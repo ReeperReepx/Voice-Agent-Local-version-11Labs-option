@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisaWire — AI Interview Coach</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        header {
+            padding: 2rem;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2rem;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+        h1 span { color: #4f8cff; }
+        .subtitle {
+            color: #888;
+            font-size: 0.95rem;
+        }
+        .container {
+            max-width: 640px;
+            width: 100%;
+            padding: 0 1.5rem;
+        }
+        .card {
+            background: #161616;
+            border: 1px solid #222;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        .status {
+            text-align: center;
+            padding: 0.5rem;
+            font-size: 1.1rem;
+            color: #888;
+        }
+        .status.active { color: #4caf50; }
+        .status.ended { color: #ff9800; }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 1.5rem 0;
+        }
+        button {
+            padding: 0.8rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        #startBtn { background: #4f8cff; color: #fff; }
+        #stopBtn { background: #ff4444; color: #fff; }
+        .timer {
+            text-align: center;
+            font-size: 2rem;
+            font-variant-numeric: tabular-nums;
+            color: #fff;
+            padding: 0.5rem;
+        }
+        .agent-status {
+            text-align: center;
+            padding: 0.5rem;
+            font-size: 0.95rem;
+            color: #4f8cff;
+            min-height: 1.5rem;
+        }
+        .transcript {
+            display: none;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #111;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+        .transcript.visible { display: block; }
+        .transcript .msg {
+            margin-bottom: 0.5rem;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid #1a1a1a;
+        }
+        .transcript .msg.agent { color: #4f8cff; }
+        .transcript .msg.user { color: #ccc; }
+        .transcript .msg .label {
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            margin-right: 0.5rem;
+        }
+        .feedback { display: none; }
+        .feedback.visible { display: block; }
+        .feedback h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #4f8cff;
+        }
+        .feedback pre {
+            background: #111;
+            padding: 1rem;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #ccc;
+        }
+        .tip {
+            background: #1a1a2e;
+            border-left: 3px solid #4f8cff;
+            padding: 0.8rem 1rem;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: #aaa;
+            border-radius: 0 8px 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Visa<span>Wire</span></h1>
+        <p class="subtitle">AI-powered interview prep coach — Talk to Riya</p>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <div id="status" class="status">Ready to start your session with Riya</div>
+            <div id="agentStatus" class="agent-status"></div>
+            <div id="timer" class="timer" style="display:none">00:00</div>
+            <div class="controls">
+                <button id="startBtn" onclick="startInterview()">Start Session</button>
+                <button id="stopBtn" onclick="stopInterview()" disabled>End Session</button>
+            </div>
+            <div class="tip">
+                Riya will guide you through interview prep. Just talk naturally — she'll ask questions, give feedback, and coach you in real-time.
+            </div>
+        </div>
+
+        <div class="card">
+            <div id="transcript" class="transcript"></div>
+        </div>
+
+        <div id="feedback" class="card feedback">
+            <h2>Session Summary</h2>
+            <pre id="feedbackText"></pre>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Conversation } from 'https://esm.sh/@elevenlabs/client@latest';
+
+        let sessionId = null;
+        let timerInterval = null;
+        let seconds = 0;
+        let conversation = null;
+
+        const statusEl = document.getElementById('status');
+        const agentStatusEl = document.getElementById('agentStatus');
+        const timerEl = document.getElementById('timer');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const feedbackEl = document.getElementById('feedback');
+        const feedbackText = document.getElementById('feedbackText');
+        const transcriptEl = document.getElementById('transcript');
+
+        function updateTimer() {
+            seconds++;
+            const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const s = String(seconds % 60).padStart(2, '0');
+            timerEl.textContent = `${m}:${s}`;
+        }
+
+        function addTranscriptMessage(role, text) {
+            const div = document.createElement('div');
+            div.className = `msg ${role}`;
+            const label = role === 'agent' ? 'Riya' : 'You';
+            div.innerHTML = `<span class="label">${label}:</span>${text}`;
+            transcriptEl.appendChild(div);
+            transcriptEl.scrollTop = transcriptEl.scrollHeight;
+        }
+
+        window.startInterview = async function() {
+            startBtn.disabled = true;
+            statusEl.textContent = 'Requesting microphone access...';
+
+            // Request mic permission first
+            try {
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (err) {
+                statusEl.textContent = 'Microphone access denied. Please allow mic access and try again.';
+                startBtn.disabled = false;
+                return;
+            }
+
+            statusEl.textContent = 'Connecting to Riya...';
+
+            try {
+                // Create server session
+                const res = await fetch('/api/session/start', { method: 'POST' });
+                if (!res.ok) throw new Error('Failed to start session');
+                const data = await res.json();
+                sessionId = data.session_id;
+
+                // Start ElevenLabs conversation
+                const sessionOptions = {
+                    onConnect: () => {
+                        statusEl.textContent = 'Connected — talk to Riya!';
+                        statusEl.className = 'status active';
+                        agentStatusEl.textContent = 'Riya is listening...';
+                    },
+                    onDisconnect: () => {
+                        agentStatusEl.textContent = 'Session ended';
+                    },
+                    onMessage: (message) => {
+                        if (message.source === 'ai') {
+                            addTranscriptMessage('agent', message.message);
+                        } else if (message.source === 'user') {
+                            addTranscriptMessage('user', message.message);
+                        }
+                    },
+                    onModeChange: (mode) => {
+                        if (mode.mode === 'speaking') {
+                            agentStatusEl.textContent = 'Riya is speaking...';
+                        } else {
+                            agentStatusEl.textContent = 'Riya is listening...';
+                        }
+                    },
+                    onError: (error) => {
+                        console.error('Conversation error:', error);
+                        agentStatusEl.textContent = 'Connection error — try again';
+                    },
+                };
+
+                if (data.signed_url) {
+                    sessionOptions.signedUrl = data.signed_url;
+                } else {
+                    sessionOptions.agentId = data.agent_id;
+                }
+
+                conversation = await Conversation.startSession(sessionOptions);
+
+                // Show UI
+                transcriptEl.innerHTML = '';
+                transcriptEl.classList.add('visible');
+                timerEl.style.display = 'block';
+                stopBtn.disabled = false;
+                feedbackEl.classList.remove('visible');
+
+                seconds = 0;
+                timerInterval = setInterval(updateTimer, 1000);
+            } catch (err) {
+                statusEl.textContent = `Error: ${err.message}`;
+                startBtn.disabled = false;
+                console.error(err);
+            }
+        };
+
+        window.stopInterview = async function() {
+            stopBtn.disabled = true;
+            clearInterval(timerInterval);
+            agentStatusEl.textContent = '';
+
+            // End the ElevenLabs conversation
+            if (conversation) {
+                try {
+                    await conversation.endSession();
+                } catch (e) {
+                    console.warn('Error ending conversation:', e);
+                }
+                conversation = null;
+            }
+
+            statusEl.textContent = 'Generating summary...';
+            statusEl.className = 'status ended';
+
+            try {
+                const res = await fetch(`/api/session/${sessionId}/end`, { method: 'POST' });
+                if (!res.ok) throw new Error('Failed to end session');
+                const data = await res.json();
+
+                feedbackText.textContent = data.summary;
+                feedbackEl.classList.add('visible');
+                statusEl.textContent = 'Session complete — review your summary below';
+            } catch (err) {
+                statusEl.textContent = `Error: ${err.message}`;
+            }
+
+            startBtn.disabled = false;
+            timerEl.style.display = 'none';
+        };
+    </script>
+</body>
+</html>

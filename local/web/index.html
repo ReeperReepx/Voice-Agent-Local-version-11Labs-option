@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisaWire Local — AI Interview Coach</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        header {
+            padding: 2rem;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2rem;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+        h1 span { color: #4f8cff; }
+        .badge {
+            display: inline-block;
+            background: #1a2a1a;
+            color: #4caf50;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 0.95rem;
+        }
+        .container {
+            max-width: 700px;
+            width: 100%;
+            padding: 0 1.5rem;
+        }
+        .card {
+            background: #161616;
+            border: 1px solid #222;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        .config {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .config label {
+            font-size: 0.85rem;
+            color: #888;
+        }
+        .config select {
+            background: #222;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+        }
+        .status {
+            text-align: center;
+            padding: 0.5rem;
+            font-size: 1.1rem;
+            color: #888;
+        }
+        .status.active { color: #4caf50; }
+        .status.ended { color: #ff9800; }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 1.5rem 0;
+        }
+        button {
+            padding: 0.8rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        #startBtn { background: #4f8cff; color: #fff; }
+        #stopBtn { background: #ff4444; color: #fff; }
+        .timer {
+            text-align: center;
+            font-size: 2rem;
+            font-variant-numeric: tabular-nums;
+            color: #fff;
+            padding: 0.5rem;
+        }
+        .agent-status {
+            text-align: center;
+            padding: 0.5rem;
+            font-size: 0.95rem;
+            color: #4f8cff;
+            min-height: 1.5rem;
+        }
+        .state-indicator {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+        .state-indicator span {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            margin: 0.1rem;
+            border-radius: 4px;
+            background: #1a1a1a;
+        }
+        .state-indicator span.current {
+            background: #1a2a4a;
+            color: #4f8cff;
+            font-weight: 600;
+        }
+        .state-indicator span.done {
+            background: #1a2a1a;
+            color: #4caf50;
+        }
+        .transcript {
+            display: none;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #111;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+        .transcript.visible { display: block; }
+        .transcript .msg {
+            margin-bottom: 0.5rem;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid #1a1a1a;
+        }
+        .transcript .msg.agent { color: #4f8cff; }
+        .transcript .msg.user { color: #ccc; }
+        .transcript .msg.partial { color: #666; font-style: italic; }
+        .transcript .msg .label {
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            margin-right: 0.5rem;
+        }
+        .chat-input {
+            display: none;
+            margin-top: 1rem;
+        }
+        .chat-input.visible { display: flex; }
+        .chat-input input {
+            flex: 1;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px 0 0 8px;
+            padding: 0.8rem 1rem;
+            color: #e0e0e0;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        .chat-input input:focus {
+            border-color: #4f8cff;
+        }
+        .chat-input input::placeholder {
+            color: #555;
+        }
+        .chat-input button {
+            border-radius: 0 8px 8px 0;
+            padding: 0.8rem 1.5rem;
+            background: #4f8cff;
+            color: #fff;
+            font-size: 0.95rem;
+        }
+        .feedback { display: none; }
+        .feedback.visible { display: block; }
+        .feedback h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #4f8cff;
+        }
+        .feedback pre {
+            background: #111;
+            padding: 1rem;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #ccc;
+        }
+        .report-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .report-item {
+            background: #111;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .report-item .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #4f8cff;
+        }
+        .report-item .label {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 0.3rem;
+        }
+        .tip {
+            background: #1a1a2e;
+            border-left: 3px solid #4f8cff;
+            padding: 0.8rem 1rem;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: #aaa;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* --- Voice Mode --- */
+        .mode-toggle {
+            display: none;
+            justify-content: center;
+            gap: 0;
+            margin: 1rem 0;
+        }
+        .mode-toggle.visible { display: flex; }
+        .mode-toggle button {
+            padding: 0.5rem 1.5rem;
+            font-size: 0.85rem;
+            background: #222;
+            color: #888;
+            border: 1px solid #333;
+            border-radius: 0;
+            font-weight: 500;
+        }
+        .mode-toggle button:first-child { border-radius: 6px 0 0 6px; }
+        .mode-toggle button:last-child { border-radius: 0 6px 6px 0; }
+        .mode-toggle button.active {
+            background: #1a2a4a;
+            color: #4f8cff;
+            border-color: #4f8cff;
+        }
+
+        .voice-controls {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .voice-controls.visible { display: flex; }
+
+        .mic-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #222;
+            border: 3px solid #333;
+            color: #888;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 0;
+        }
+        .mic-btn:hover { border-color: #4f8cff; color: #4f8cff; }
+        .mic-btn.listening {
+            border-color: #4caf50;
+            color: #4caf50;
+            animation: pulse 1.5s infinite;
+        }
+        .mic-btn.processing {
+            border-color: #ff9800;
+            color: #ff9800;
+        }
+        .mic-btn.speaking {
+            border-color: #4f8cff;
+            color: #4f8cff;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(79,140,255,0.4); }
+            50% { box-shadow: 0 0 0 15px rgba(79,140,255,0); }
+        }
+
+        .voice-options {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        .voice-options label {
+            font-size: 0.8rem;
+            color: #888;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: pointer;
+        }
+        .voice-options input[type="checkbox"] {
+            accent-color: #4f8cff;
+        }
+
+        .voice-status {
+            font-size: 0.8rem;
+            color: #666;
+            min-height: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Visa<span>Wire</span> <span class="badge">LOCAL</span></h1>
+        <p class="subtitle">Self-hosted interview prep coach — fully open source</p>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <div class="config">
+                <div>
+                    <label>Destination</label><br>
+                    <select id="destCountry">
+                        <option value="US">United States</option>
+                        <option value="UK">United Kingdom</option>
+                        <option value="CA">Canada</option>
+                        <option value="AU">Australia</option>
+                        <option value="DE">Germany</option>
+                        <option value="FR">France</option>
+                        <option value="NL">Netherlands</option>
+                        <option value="IE">Ireland</option>
+                        <option value="IT">Italy</option>
+                        <option value="ES">Spain</option>
+                        <option value="CH">Switzerland</option>
+                        <option value="SE">Sweden</option>
+                        <option value="FI">Finland</option>
+                        <option value="NO">Norway</option>
+                        <option value="DK">Denmark</option>
+                        <option value="JP">Japan</option>
+                        <option value="KR">South Korea</option>
+                        <option value="SG">Singapore</option>
+                        <option value="NZ">New Zealand</option>
+                        <option value="AE">UAE</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Origin</label><br>
+                    <select id="originCountry">
+                        <option value="India">India</option>
+                        <option value="Pakistan">Pakistan</option>
+                        <option value="Bangladesh">Bangladesh</option>
+                        <option value="Nepal">Nepal</option>
+                        <option value="Nigeria">Nigeria</option>
+                        <option value="China">China</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="stateIndicator" class="state-indicator"></div>
+            <div id="status" class="status">Ready to start your interview practice</div>
+            <div id="agentStatus" class="agent-status"></div>
+            <div id="timer" class="timer" style="display:none">00:00</div>
+            <div class="controls">
+                <button id="startBtn" onclick="startInterview()">Start Session</button>
+                <button id="stopBtn" onclick="stopInterview()" disabled>End Session</button>
+            </div>
+
+            <!-- Mode Toggle: Text / Voice -->
+            <div id="modeToggle" class="mode-toggle">
+                <button id="textModeBtn" class="active" onclick="switchMode('text')">Text</button>
+                <button id="voiceModeBtn" onclick="switchMode('voice')">Voice</button>
+            </div>
+
+            <div class="tip">
+                Type your responses or use Voice mode with your microphone. The officer (powered by Qwen2.5 running locally) will interview you. All processing happens on your machine.
+            </div>
+        </div>
+
+        <div class="card">
+            <div id="transcript" class="transcript"></div>
+
+            <!-- Text input -->
+            <div id="chatInput" class="chat-input">
+                <input type="text" id="userInput" placeholder="Type your answer..." onkeydown="if(event.key==='Enter')sendMessage()">
+                <button onclick="sendMessage()" id="sendBtn">Send</button>
+            </div>
+
+            <!-- Voice controls -->
+            <div id="voiceControls" class="voice-controls">
+                <button class="mic-btn" id="micBtn" onclick="toggleMic()">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" y1="19" x2="12" y2="23"/>
+                        <line x1="8" y1="23" x2="16" y2="23"/>
+                    </svg>
+                </button>
+                <div class="voice-options">
+                    <label>
+                        <input type="checkbox" id="pttToggle" checked>
+                        Push-to-talk (recommended)
+                    </label>
+                </div>
+                <div id="voiceStatus" class="voice-status"></div>
+                <!-- Text fallback in voice mode (sends via WebSocket for TTS response) -->
+                <div id="voiceTextInput" class="chat-input visible" style="margin-top:0.5rem;width:100%">
+                    <input type="text" id="voiceUserInput" placeholder="Type here (voice unavailable)..." onkeydown="if(event.key==='Enter')sendVoiceText()">
+                    <button onclick="sendVoiceText()" id="voiceSendBtn">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="feedback" class="card feedback">
+            <h2>Session Report</h2>
+            <div id="reportGrid" class="report-grid"></div>
+            <pre id="feedbackText"></pre>
+        </div>
+    </div>
+
+    <script>
+        const STATES = ['greeting', 'academics', 'course_choice', 'finance', 'intent', 'country_specific', 'summary'];
+
+        let sessionId = null;
+        let timerInterval = null;
+        let seconds = 0;
+        let currentState = 'greeting';
+        let sending = false;
+        let currentMode = 'text'; // 'text' or 'voice'
+
+        // --- Voice state ---
+        let ws = null;
+        let audioCtx = null;
+        let micStream = null;
+        let workletNode = null;
+        let isListening = false;
+        let isSpeaking = false;
+        let playbackQueue = [];
+        let playbackScheduledTime = 0;
+        let vadSpeechTimer = null;
+        let vadSilenceTimer = null;
+        let vadActive = false; // true when user is actively speaking
+        const VAD_SPEECH_THRESHOLD = 0.04;
+        const VAD_SPEECH_DELAY_MS = 300;
+        const VAD_SILENCE_DELAY_MS = 1500;
+        const PLAYBACK_SAMPLE_RATE = 24000;
+
+        // DOM refs
+        const statusEl = document.getElementById('status');
+        const agentStatusEl = document.getElementById('agentStatus');
+        const timerEl = document.getElementById('timer');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const feedbackEl = document.getElementById('feedback');
+        const feedbackText = document.getElementById('feedbackText');
+        const transcriptEl = document.getElementById('transcript');
+        const stateIndicator = document.getElementById('stateIndicator');
+        const reportGrid = document.getElementById('reportGrid');
+        const chatInput = document.getElementById('chatInput');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const modeToggle = document.getElementById('modeToggle');
+        const textModeBtn = document.getElementById('textModeBtn');
+        const voiceModeBtn = document.getElementById('voiceModeBtn');
+        const voiceControls = document.getElementById('voiceControls');
+        const micBtn = document.getElementById('micBtn');
+        const voiceStatus = document.getElementById('voiceStatus');
+        const pttToggle = document.getElementById('pttToggle');
+        const voiceUserInput = document.getElementById('voiceUserInput');
+        const voiceSendBtn = document.getElementById('voiceSendBtn');
+        let asrReady = false;
+
+        // --- Shared UI ---
+
+        function updateStateIndicator(current) {
+            currentState = current;
+            const currentIdx = STATES.indexOf(current);
+            stateIndicator.innerHTML = STATES.map((s, i) => {
+                let cls = '';
+                if (i < currentIdx) cls = 'done';
+                else if (i === currentIdx) cls = 'current';
+                return `<span class="${cls}">${s.replace('_', ' ')}</span>`;
+            }).join(' ');
+        }
+
+        function updateTimer() {
+            seconds++;
+            const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const s = String(seconds % 60).padStart(2, '0');
+            timerEl.textContent = `${m}:${s}`;
+        }
+
+        function addTranscriptMessage(role, text, cls) {
+            const div = document.createElement('div');
+            div.className = `msg ${cls || role}`;
+            const label = role === 'agent' ? 'Officer' : (role === 'partial' ? 'You (hearing)' : 'You');
+            div.innerHTML = `<span class="label">${label}:</span>${text}`;
+            div.dataset.role = role;
+            transcriptEl.appendChild(div);
+            transcriptEl.scrollTop = transcriptEl.scrollHeight;
+            return div;
+        }
+
+        function updatePartialTranscript(text) {
+            // Update or create the partial transcript element
+            let partial = transcriptEl.querySelector('.msg.partial');
+            if (!partial) {
+                partial = addTranscriptMessage('partial', text, 'partial');
+            } else {
+                partial.innerHTML = `<span class="label">You (hearing):</span>${text}`;
+            }
+        }
+
+        function finalizePartialTranscript(text) {
+            const partial = transcriptEl.querySelector('.msg.partial');
+            if (partial) {
+                partial.className = 'msg user';
+                partial.innerHTML = `<span class="label">You:</span>${text}`;
+                partial.dataset.role = 'user';
+            } else {
+                addTranscriptMessage('user', text);
+            }
+        }
+
+        // --- Mode Switching ---
+
+        function switchMode(mode) {
+            currentMode = mode;
+            textModeBtn.classList.toggle('active', mode === 'text');
+            voiceModeBtn.classList.toggle('active', mode === 'voice');
+
+            if (mode === 'text') {
+                chatInput.classList.add('visible');
+                voiceControls.classList.remove('visible');
+                stopVoice();
+                userInput.focus();
+            } else {
+                chatInput.classList.remove('visible');
+                voiceControls.classList.add('visible');
+                initVoice();
+            }
+        }
+
+        // --- Text Mode (existing) ---
+
+        async function startInterview() {
+            startBtn.disabled = true;
+            statusEl.textContent = 'Starting session...';
+
+            const dest = document.getElementById('destCountry').value;
+            const origin = document.getElementById('originCountry').value;
+
+            try {
+                const res = await fetch('/api/session/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        destination_country: dest,
+                        origin_country: origin,
+                    }),
+                });
+
+                if (!res.ok) throw new Error('Failed to start session');
+                const data = await res.json();
+                sessionId = data.session_id;
+
+                // Update UI
+                updateStateIndicator(data.current_state);
+                statusEl.textContent = 'Session active';
+                statusEl.className = 'status active';
+                agentStatusEl.textContent = '';
+
+                transcriptEl.innerHTML = '';
+                transcriptEl.classList.add('visible');
+                modeToggle.classList.add('visible');
+                timerEl.style.display = 'block';
+                stopBtn.disabled = false;
+                feedbackEl.classList.remove('visible');
+
+                seconds = 0;
+                timerInterval = setInterval(updateTimer, 1000);
+
+                // Show text input by default
+                switchMode('text');
+
+                // Send initial greeting through the LLM
+                agentStatusEl.textContent = 'Officer is preparing...';
+                try {
+                    const chatRes = await fetch(`/api/session/${sessionId}/chat`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: 'Hello, I am here for my visa interview.' }),
+                    });
+                    if (chatRes.ok) {
+                        const chatData = await chatRes.json();
+                        addTranscriptMessage('user', 'Hello, I am here for my visa interview.');
+                        addTranscriptMessage('agent', chatData.response);
+                        updateStateIndicator(chatData.current_state);
+                    } else {
+                        addTranscriptMessage('agent', 'Good morning. Welcome to your visa interview practice. Please tell me about yourself and your plans.');
+                    }
+                } catch (e) {
+                    addTranscriptMessage('agent', 'Good morning. Welcome to your visa interview practice. Please tell me about yourself and your plans.');
+                }
+                agentStatusEl.textContent = '';
+                userInput.focus();
+
+            } catch (err) {
+                statusEl.textContent = `Error: ${err.message}`;
+                startBtn.disabled = false;
+            }
+        }
+
+        async function sendMessage() {
+            if (sending || !sessionId) return;
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            sending = true;
+            sendBtn.disabled = true;
+            userInput.value = '';
+
+            addTranscriptMessage('user', text);
+            agentStatusEl.textContent = 'Officer is thinking...';
+
+            try {
+                const res = await fetch(`/api/session/${sessionId}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text }),
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Chat failed');
+                }
+
+                const data = await res.json();
+                addTranscriptMessage('agent', data.response);
+                updateStateIndicator(data.current_state);
+
+                if (data.explanation_mode) {
+                    agentStatusEl.textContent = 'Explanation mode (Hindi)';
+                } else {
+                    agentStatusEl.textContent = '';
+                }
+
+                if (data.current_state === 'ended') {
+                    await stopInterview();
+                    return;
+                }
+
+            } catch (err) {
+                agentStatusEl.textContent = `Error: ${err.message}`;
+            }
+
+            sending = false;
+            sendBtn.disabled = false;
+            userInput.focus();
+        }
+
+        async function stopInterview() {
+            stopBtn.disabled = true;
+            clearInterval(timerInterval);
+            agentStatusEl.textContent = '';
+            chatInput.classList.remove('visible');
+            voiceControls.classList.remove('visible');
+            modeToggle.classList.remove('visible');
+            stopVoice();
+
+            statusEl.textContent = 'Generating report...';
+            statusEl.className = 'status ended';
+
+            try {
+                const res = await fetch(`/api/session/${sessionId}/end`, { method: 'POST' });
+                if (!res.ok) throw new Error('Failed to end session');
+                const data = await res.json();
+
+                reportGrid.innerHTML = `
+                    <div class="report-item">
+                        <div class="value">${data.average_score || 0}</div>
+                        <div class="label">Average Score</div>
+                    </div>
+                    <div class="report-item">
+                        <div class="value">${data.readiness || 'N/A'}</div>
+                        <div class="label">Readiness</div>
+                    </div>
+                    <div class="report-item">
+                        <div class="value">${data.total_questions || 0}</div>
+                        <div class="label">Questions</div>
+                    </div>
+                    <div class="report-item">
+                        <div class="value">${data.duration_minutes || 0}m</div>
+                        <div class="label">Duration</div>
+                    </div>
+                `;
+
+                let summary = `Readiness: ${data.readiness}\n`;
+                summary += `Average Score: ${data.average_score}\n`;
+                summary += `Language Switches: ${data.language_switches || 0}\n`;
+                summary += `Contradictions: ${data.contradictions_found || 0}\n\n`;
+
+                if (data.weak_areas && data.weak_areas.length > 0) {
+                    summary += `Weak Areas:\n`;
+                    data.weak_areas.forEach(w => {
+                        summary += `  - Question ${w.question_id} (${w.category}): ${w.score}\n`;
+                    });
+                }
+
+                feedbackText.textContent = summary;
+                feedbackEl.classList.add('visible');
+                statusEl.textContent = 'Session complete — review your report below';
+
+            } catch (err) {
+                statusEl.textContent = `Error: ${err.message}`;
+            }
+
+            startBtn.disabled = false;
+            timerEl.style.display = 'none';
+            sessionId = null;
+        }
+
+        // ================================================================
+        // Voice Mode
+        // ================================================================
+
+        async function initVoice() {
+            if (ws && ws.readyState === WebSocket.OPEN) return;
+            if (!sessionId) return;
+
+            voiceStatus.textContent = 'Connecting...';
+
+            // Set up AudioContext for playback (24kHz)
+            if (!audioCtx) {
+                audioCtx = new AudioContext({ sampleRate: PLAYBACK_SAMPLE_RATE });
+            }
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+
+            // Connect WebSocket
+            const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+            ws = new WebSocket(`${proto}://${location.host}/ws/audio/${sessionId}`);
+            ws.binaryType = 'arraybuffer';
+
+            ws.onopen = async () => {
+                console.log('[WS] Connected');
+                voiceStatus.textContent = 'Loading voice recognition... Type below to talk now.';
+                micBtn.style.opacity = '0.4';
+                micBtn.style.pointerEvents = 'none';
+                await startMicCapture();
+            };
+
+            ws.onmessage = (event) => {
+                if (event.data instanceof ArrayBuffer) {
+                    console.log('[WS] Received audio chunk:', event.data.byteLength, 'bytes');
+                    handleAudioChunk(event.data);
+                } else {
+                    const msg = JSON.parse(event.data);
+                    console.log('[WS] Received:', msg.type, msg);
+                    handleServerMessage(msg);
+                }
+            };
+
+            ws.onclose = (e) => {
+                console.log('[WS] Closed, code:', e.code, 'reason:', e.reason);
+                voiceStatus.textContent = 'Disconnected — switch to Text mode or restart session';
+                micBtn.className = 'mic-btn';
+                isListening = false;
+            };
+
+            ws.onerror = (e) => {
+                console.error('[WS] Error:', e);
+                voiceStatus.textContent = 'Connection error';
+            };
+        }
+
+        function stopVoice() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            if (workletNode) {
+                workletNode.disconnect();
+                workletNode = null;
+            }
+            if (micStream) {
+                micStream.getTracks().forEach(t => t.stop());
+                micStream = null;
+            }
+            clearTimeout(vadSpeechTimer);
+            clearTimeout(vadSilenceTimer);
+            isListening = false;
+            vadActive = false;
+            micBtn.className = 'mic-btn';
+        }
+
+        async function startMicCapture() {
+            try {
+                micStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 1,
+                        sampleRate: 16000,
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                    },
+                });
+
+                // Create a separate AudioContext for mic capture at 16kHz
+                const micCtx = new AudioContext({ sampleRate: 16000 });
+                await micCtx.audioWorklet.addModule('/static/audio-processor.js');
+
+                const source = micCtx.createMediaStreamSource(micStream);
+                workletNode = new AudioWorkletNode(micCtx, 'pcm-capture-processor');
+
+                workletNode.port.onmessage = (e) => {
+                    const { pcmData, rms } = e.data;
+                    handleMicData(pcmData, rms);
+                };
+
+                source.connect(workletNode);
+                workletNode.connect(micCtx.destination); // required for processing
+            } catch (err) {
+                voiceStatus.textContent = `Mic error: ${err.message}`;
+            }
+        }
+
+        function handleMicData(pcmData, rms) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+            const isPTT = pttToggle.checked;
+
+            if (isPTT) {
+                // In push-to-talk mode, only send when isListening (mic button held)
+                if (isListening) {
+                    ws.send(pcmData.buffer);
+                }
+                return;
+            }
+
+            // Auto-VAD mode
+            if (rms > VAD_SPEECH_THRESHOLD) {
+                // Speech detected
+                clearTimeout(vadSilenceTimer);
+                vadSilenceTimer = null;
+
+                if (!vadActive) {
+                    // Debounce: require sustained speech for VAD_SPEECH_DELAY_MS
+                    if (!vadSpeechTimer) {
+                        vadSpeechTimer = setTimeout(() => {
+                            vadActive = true;
+                            vadSpeechTimer = null;
+                            sendSpeechStart();
+                        }, VAD_SPEECH_DELAY_MS);
+                    }
+                }
+
+                if (vadActive && isListening) {
+                    ws.send(pcmData.buffer);
+                }
+            } else {
+                // Silence
+                clearTimeout(vadSpeechTimer);
+                vadSpeechTimer = null;
+
+                if (vadActive && isListening) {
+                    // Send audio during silence too (to flush buffer)
+                    ws.send(pcmData.buffer);
+
+                    if (!vadSilenceTimer) {
+                        vadSilenceTimer = setTimeout(() => {
+                            vadActive = false;
+                            vadSilenceTimer = null;
+                            sendSpeechEnd();
+                        }, VAD_SILENCE_DELAY_MS);
+                    }
+                }
+            }
+        }
+
+        function sendSpeechStart() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'speech_start' }));
+            isListening = true;
+            isSpeaking = false;
+            micBtn.className = 'mic-btn listening';
+            voiceStatus.textContent = 'Listening...';
+            playbackQueue = [];
+        }
+
+        function sendSpeechEnd() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'speech_end' }));
+            isListening = false;
+            micBtn.className = 'mic-btn processing';
+            voiceStatus.textContent = 'Processing...';
+        }
+
+        function toggleMic() {
+            if (!asrReady) {
+                voiceStatus.textContent = 'Voice recognition still loading — please wait or type below';
+                return;
+            }
+
+            const isPTT = pttToggle.checked;
+
+            if (isPTT) {
+                // Push-to-talk: toggle on/off
+                if (isListening) {
+                    sendSpeechEnd();
+                } else {
+                    sendSpeechStart();
+                }
+            } else {
+                // Auto-VAD: manual override — force start/stop
+                if (isListening) {
+                    vadActive = false;
+                    clearTimeout(vadSilenceTimer);
+                    sendSpeechEnd();
+                } else {
+                    vadActive = true;
+                    sendSpeechStart();
+                }
+            }
+        }
+
+        // --- Voice text fallback (sends text through WebSocket for TTS response) ---
+
+        function sendVoiceText() {
+            console.log('[sendVoiceText] ws?', !!ws, 'readyState?', ws?.readyState, 'OPEN=', WebSocket.OPEN);
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                voiceStatus.textContent = 'WebSocket not connected. Switch to Text mode.';
+                console.error('[sendVoiceText] WebSocket not open');
+                return;
+            }
+            const text = voiceUserInput.value.trim();
+            if (!text) return;
+            voiceUserInput.value = '';
+            voiceSendBtn.disabled = true;
+
+            addTranscriptMessage('user', text);
+            agentStatusEl.textContent = 'Officer is thinking...';
+            console.log('[sendVoiceText] Sending text_input:', text);
+            ws.send(JSON.stringify({ type: 'text_input', text: text }));
+
+            setTimeout(() => { voiceSendBtn.disabled = false; }, 500);
+        }
+
+        // --- Server message handling ---
+
+        function handleServerMessage(msg) {
+            switch (msg.type) {
+                case 'transcript_partial':
+                    updatePartialTranscript(msg.text);
+                    break;
+
+                case 'transcript_final':
+                    finalizePartialTranscript(msg.text);
+                    break;
+
+                case 'agent_thinking':
+                    agentStatusEl.textContent = 'Officer is thinking...';
+                    break;
+
+                case 'agent_response':
+                    addTranscriptMessage('agent', msg.text);
+                    if (msg.state) updateStateIndicator(msg.state);
+                    if (msg.explanation_mode) {
+                        agentStatusEl.textContent = 'Explanation mode (Hindi)';
+                    } else {
+                        agentStatusEl.textContent = '';
+                    }
+                    if (msg.state === 'ended') {
+                        stopInterview();
+                    }
+                    break;
+
+                case 'tts_start':
+                    isSpeaking = true;
+                    micBtn.className = 'mic-btn speaking';
+                    voiceStatus.textContent = 'Officer speaking...';
+                    playbackQueue = [];
+                    playbackScheduledTime = audioCtx.currentTime;
+                    break;
+
+                case 'tts_end':
+                    isSpeaking = false;
+                    micBtn.className = 'mic-btn';
+                    voiceStatus.textContent = 'Your turn — speak or click mic';
+                    break;
+
+                case 'state_change':
+                    if (msg.state) updateStateIndicator(msg.state);
+                    break;
+
+                case 'asr_status':
+                    asrReady = msg.ready;
+                    if (msg.ready) {
+                        voiceStatus.textContent = 'Voice recognition ready — click mic to speak';
+                        micBtn.style.opacity = '1';
+                        micBtn.style.pointerEvents = 'auto';
+                    } else {
+                        voiceStatus.textContent = msg.message || 'Voice recognition unavailable — type your answers below';
+                        micBtn.style.opacity = '0.4';
+                        micBtn.style.pointerEvents = 'none';
+                    }
+                    break;
+
+                case 'status':
+                    voiceStatus.textContent = msg.message;
+                    break;
+
+                case 'error':
+                    agentStatusEl.textContent = `Error: ${msg.message}`;
+                    voiceStatus.textContent = msg.message;
+                    micBtn.className = 'mic-btn';
+                    isListening = false;
+                    isSpeaking = false;
+                    break;
+            }
+        }
+
+        // --- Audio playback (24kHz PCM16) ---
+
+        function handleAudioChunk(arrayBuffer) {
+            if (!audioCtx) return;
+
+            const int16 = new Int16Array(arrayBuffer);
+            const float32 = new Float32Array(int16.length);
+            for (let i = 0; i < int16.length; i++) {
+                float32[i] = int16[i] / 32768.0;
+            }
+
+            const audioBuffer = audioCtx.createBuffer(1, float32.length, PLAYBACK_SAMPLE_RATE);
+            audioBuffer.getChannelData(0).set(float32);
+
+            const source = audioCtx.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioCtx.destination);
+
+            // Schedule playback gaplessly
+            const now = audioCtx.currentTime;
+            if (playbackScheduledTime < now) {
+                playbackScheduledTime = now;
+            }
+            source.start(playbackScheduledTime);
+            playbackScheduledTime += audioBuffer.duration;
+        }
+    </script>
+</body>
+</html>
