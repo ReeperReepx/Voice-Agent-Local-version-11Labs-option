@@ -5,7 +5,6 @@ import { Mic, Square, RotateCcw } from "lucide-react";
 import { StatusIndicator } from "@/components/status-indicator";
 import { Transcript, type TranscriptMessage } from "@/components/transcript";
 import { FeedbackPanel, type FeedbackData } from "@/components/feedback-panel";
-import { cn } from "@/lib/utils";
 
 type SessionStatus =
   | "idle"
@@ -24,7 +23,8 @@ export function InterviewSession() {
   const [feedback, setFeedback] = useState<FeedbackData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const conversationRef = useRef<ReturnType<typeof import("@elevenlabs/client").Conversation.startSession> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const conversationRef = useRef<any>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const messageIdRef = useRef(0);
 
@@ -80,10 +80,11 @@ export function InterviewSession() {
       const data = await res.json();
       setSessionId(data.session_id);
 
-      // Dynamically import ElevenLabs client
-      const { Conversation } = await import("@elevenlabs/client");
+      // Dynamically import ElevenLabs client (browser-only)
+      const { Conversation } = await import("@11labs/client");
 
-      const sessionOptions: Parameters<typeof Conversation.startSession>[0] = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sessionOptions: Record<string, any> = {
         onConnect: () => {
           setStatus("listening");
         },
@@ -112,13 +113,13 @@ export function InterviewSession() {
       };
 
       if (data.signed_url) {
-        (sessionOptions as Record<string, unknown>).signedUrl = data.signed_url;
+        sessionOptions.signedUrl = data.signed_url;
       } else {
-        (sessionOptions as Record<string, unknown>).agentId = data.agent_id;
+        sessionOptions.agentId = data.agent_id;
       }
 
       const conversation = await Conversation.startSession(sessionOptions);
-      conversationRef.current = conversation as typeof conversationRef.current;
+      conversationRef.current = conversation;
     } catch (err) {
       setStatus("error");
       setErrorMessage(
@@ -133,12 +134,14 @@ export function InterviewSession() {
     // End the ElevenLabs conversation
     if (conversationRef.current) {
       try {
-        const conv = await conversationRef.current;
-        if (conv && typeof conv.endSession === "function") {
+        const conv = conversationRef.current;
+        if (typeof conv.endSession === "function") {
           await conv.endSession();
+        } else if (typeof conv.end === "function") {
+          await conv.end();
         }
-      } catch (e) {
-        console.warn("Error ending conversation:", e);
+      } catch {
+        // Swallow errors on session teardown
       }
       conversationRef.current = null;
     }
