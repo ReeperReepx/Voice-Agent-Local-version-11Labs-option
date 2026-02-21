@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: visawire-local
-  labels:
-    app.kubernetes.io/part-of: visawire
