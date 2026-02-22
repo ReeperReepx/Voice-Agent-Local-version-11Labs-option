@@ -48,10 +48,8 @@ export function InterviewCoach() {
       const data = await res.json()
       setSessionId(data.session_id)
 
-      // Dynamically import ElevenLabs client
-      const { Conversation } = await import(
-        "https://esm.sh/@elevenlabs/client@latest"
-      )
+      // Dynamically import ElevenLabs client (npm package)
+      const { Conversation } = await import("@elevenlabs/client")
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sessionOptions: any = {
